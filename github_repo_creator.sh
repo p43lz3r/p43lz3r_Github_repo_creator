@@ -273,8 +273,9 @@ check_git_config() {
     fi
     
     local git_name git_email
-    git_name=$(git config --global user.name 2>/dev/null)
-    git_email=$(git config --global user.email 2>/dev/null)
+    # Use || true to prevent script exit on non-zero return codes
+    git_name=$(git config --global user.name 2>/dev/null || true)
+    git_email=$(git config --global user.email 2>/dev/null || true)
     
     if [[ -z "$git_name" ]] || [[ -z "$git_email" ]]; then
         print_warning "Git is not configured with user information."
@@ -284,8 +285,12 @@ check_git_config() {
         if [[ -z "$git_name" ]]; then
             read -p "Enter your Git username: " git_name
             if [[ -n "$git_name" ]]; then
-                git config --global user.name "$git_name"
-                print_success "Set Git username: $git_name"
+                if git config --global user.name "$git_name"; then
+                    print_success "Set Git username: $git_name"
+                else
+                    print_error "Failed to set Git username."
+                    return 1
+                fi
             else
                 print_error "Username cannot be empty."
                 return 1
@@ -295,8 +300,12 @@ check_git_config() {
         if [[ -z "$git_email" ]]; then
             read -p "Enter your Git email: " git_email
             if [[ -n "$git_email" ]]; then
-                git config --global user.email "$git_email"
-                print_success "Set Git email: $git_email"
+                if git config --global user.email "$git_email"; then
+                    print_success "Set Git email: $git_email"
+                else
+                    print_error "Failed to set Git email."
+                    return 1
+                fi
             else
                 print_error "Email cannot be empty."
                 return 1
@@ -531,9 +540,15 @@ main() {
     echo
     
     # Check prerequisites
+    print_status "Checking prerequisites..."
     check_gh_cli
+    print_status "GitHub CLI check completed."
+    
     check_auth
+    print_status "Authentication check completed."
+    
     check_git_config
+    print_status "Git configuration check completed."
     
     echo
     print_status "Repository setup:"
